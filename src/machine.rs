@@ -25,13 +25,42 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-use address::AddressDiff;
+use address::{ AddressDiff, Address };
 use std::fmt;
 use instruction::Instruction;
 use instruction::{ADC, NOP};
 use memory::Memory;
 use registers::{ Registers, Status, StatusArgs };
 use registers::{ ps_negative, ps_overflow, ps_zero, ps_carry };
+
+// TODO akeeton: Rename!
+// TODO akeeton: Better types!
+// TODO akeeton: Trait?
+#[deriving(Show, PartialEq, Eq)]
+pub enum Value {
+    Immediate(u8),        // LDA #10      8-bit constant in instruction
+    ZeroPage(u8),         // LDA $00      zero-page address
+    ZeroPageX(u8),        // LDA $80,X    address is X register + 8-bit constant
+    ZeroPageY(u8),        // LDX $10,Y    address is Y register + 8-bit constant
+    Relative(u8),         // BNE LABEL    branch target as signed relative offset
+    Absolute(Address),    // JMP $1000    full 16-bit address
+    AbsoluteX(Address),   // STA $1000,X  full 16-bit address plus X register
+    AbsoluteY(Address),   // STA $1000,Y  full 16-bit address plus Y register
+    Indirect(Address),    // JMP ($1000)  jump to address stored at address
+    IndexedIndirectX(u8), // LDA ($10,X)  load from address stored at (constant
+                          //              zero page address plus X register)
+    IndirectIndexedY(u8), // LDA ($10),Y  load from (address stored at constant
+}
+
+impl Value {
+    pub fn get_value(&self, memory: &Memory) -> u8 {
+        match *self {
+            Immediate(value)  => value,
+            Absolute(address) => memory.get_byte(&address),
+            _                 => fail!("Not implemented.")
+        }
+    }
+}
 
 pub struct Machine {
     pub registers: Registers,
@@ -45,40 +74,55 @@ impl Machine {
     	    memory:    Memory::new()
     	}
     }
-    
+
     pub fn reset(&mut self) {
     	*self = Machine::new();
     }
 
-    pub fn fetch_instruction(&mut self) -> i8  {
-        let instr = self.memory.get_byte(&self.registers.program_counter);
+    fn peek_pc_byte(&self) -> u8 {
+        self.memory.get_byte(&self.registers.program_counter)
+    }
 
-        // Will need smarter logic to fetch the correct number of bytes 
-        // for instruction
-        self.registers.program_counter = self.registers.program_counter +  AddressDiff(1);
-        instr as i8
-    } 
+    fn pop_pc_byte(&mut self) -> u8 {
+        let byte = self.peek_pc_byte();
+        self.registers.program_counter = self.registers.program_counter + AddressDiff(1);
 
-    pub fn decode_instruction(&mut self, raw_instruction: i8) -> Instruction {
-        match raw_instruction {
-            0x69 => ADC(self.fetch_instruction()),
-            _    => NOP 
+        return byte;
+    }
+
+    pub fn pop_pc_instruction(&mut self) -> Instruction  {
+        let op_code = self.pop_pc_byte();
+
+        match op_code {
+            0x69 => ADC(Immediate(self.pop_pc_byte())),
+            0x6D => {
+                let address_low_byte  = self.pop_pc_byte();
+                let address_high_byte = self.pop_pc_byte();
+                let address = Address::new(address_low_byte, address_high_byte);
+
+                ADC(Absolute(address))
+            },
+            _    => NOP
         }
-    }    
-        
+    }
+
     pub fn execute_instruction(&mut self, instruction: Instruction) {
         match instruction {
-            ADC(immediate) => { 
+            ADC(Immediate(value)) => {
                 println!("executing add with carry");
-                self.add_with_carry(immediate);
+                self.add_with_carry(value as i8);
             },
+            ADC(Absolute(address)) => {
+                let value = self.memory.get_byte(&address);
+                self.add_with_carry(value as i8);
+            }
             NOP => {
                 println!("nop instr");
             }
             _ => println!("attempting to execute unimplemented instruction")
         };
     }
-    
+
     // TODO akeeton: Implement binary-coded decimal.
     pub fn add_with_carry(&mut self, value: i8) {
         let a_before: i8 = self.registers.accumulator;
@@ -140,7 +184,7 @@ fn add_with_carry_test() {
     assert_eq!(machine.registers.status.contains(ps_zero),     false);
     assert_eq!(machine.registers.status.contains(ps_negative), false);
     assert_eq!(machine.registers.status.contains(ps_overflow), false);
-    
+
     let mut machine = Machine::new();
 
     machine.add_with_carry(127);

@@ -42,14 +42,16 @@
 //       PC | program counter
 //
 
+use machine::Value;
+
 #[deriving(Show, PartialEq, Eq)]
 pub enum Instruction
       //                                  i/o vars should be listed as follows:
       //                                  NV BDIZC A X Y S PC M
       //
       //                                | outputs               | inputs
-{ 
-  ADC(i8) // ADd with Carry............ | NV ...ZC A            = A + M + C
+{
+  ADC(Value) // ADd with Carry............ | NV ...ZC A            = A + M + C
 
 , AND // logical AND (bitwise)......... | N. ...Z. A            = A && M
 , ASL // Arithmetic Shift Left......... | N. ...ZC A            = M << 1

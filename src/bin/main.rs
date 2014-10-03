@@ -31,6 +31,8 @@ use emu6502::machine;
 use emu6502::address::Address;
 
 fn main() {
+    /*
+    {
     let mut machine = machine::Machine::new();
 
     // "Load" a program
@@ -47,8 +49,31 @@ fn main() {
         let instruction = machine.decode_instruction(raw_instruction);
         machine.execute_instruction(instruction);
     }
-    
-    println!("{}", machine);
 
+    println!("{}", machine);
+    }
+    */
+
+    {
+    let mut machine = machine::Machine::new();
+
+    // "Load" a program
+    machine.memory.set_byte(&Address(0), 0x69); // ADC immediate opcode
+    machine.memory.set_byte(&Address(1), 0x07); // Immediate operand
+    machine.memory.set_byte(&Address(2), 0x6D); // ADC absolute opcode
+    machine.memory.set_byte(&Address(3), 0x00); // Absolute address, low byte
+    machine.memory.set_byte(&Address(4), 0x33); // Absolute address, high byte
+    machine.memory.set_byte(&Address(0x3300), 0x11); // Addend
+
+    // Obviously this will run the full program, just
+    // executing a finite num of instructions for simplicity
+    // right now.
+    for _ in range(0u, 2u) {
+        let instruction = machine.pop_pc_instruction();
+        machine.execute_instruction(instruction);
+    }
+
+    println!("{}", machine);
+    }
 }
 
