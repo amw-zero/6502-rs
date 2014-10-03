@@ -124,8 +124,8 @@ impl StackPointer {
 
 pub struct Registers {
     pub accumulator:     i8,
-    pub index_x:         i8,
-    pub index_y:         i8,
+    pub index_x:         u8,
+    pub index_y:         u8,
     pub stack_pointer:   StackPointer,
     pub program_counter: Address,
     pub status:          Status

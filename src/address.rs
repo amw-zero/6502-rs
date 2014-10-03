@@ -27,7 +27,7 @@
 
 pub enum AddressingMode {
     Accumulator,      // LSR A        work directly on accumulator
-    Immediate,        // LDA #10      8-bit constant in instruction 
+    Immediate,        // LDA #10      8-bit constant in instruction
     ZeroPage,         // LDA $00      zero-page address
     ZeroPageX,        // LDA $80,X    address is X register + 8-bit constant
     ZeroPageY,        // LDX $10,Y    address is Y register + 8-bit constant
@@ -48,7 +48,7 @@ pub enum AddressingMode {
 #[deriving(PartialEq, Eq, PartialOrd, Ord)]
 pub struct AddressDiff(pub u16);
 
-#[deriving(PartialEq, Eq, PartialOrd, Ord)]
+#[deriving(PartialEq, Eq, PartialOrd, Ord, Show)]
 pub struct Address(pub u16);
 
 impl Add<AddressDiff, Address> for Address {
@@ -84,6 +84,10 @@ impl Add<CheckedAddressDiff, Address> for Address {
 */
 
 impl Address {
+    pub fn new(low_byte: u8, high_byte: u8) -> Address {
+        Address((low_byte as u16) | ((high_byte as u16) << 8))
+    }
+
     pub fn to_u16(&self) -> u16 {
         match *self {
             Address(address_) => address_
