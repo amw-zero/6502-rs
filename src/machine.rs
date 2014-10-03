@@ -53,10 +53,31 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn get_value(&self, memory: &Memory) -> u8 {
+    pub fn get_value(&self, memory: &Memory, registers: &Registers) -> u8 {
         match *self {
-            Immediate(value)  => value,
+            Immediate(value)   => value,
+            ZeroPage(address)  => {
+                let address = Address::new(address, 0);
+                memory.get_byte(&address)
+            },
+            ZeroPageX(address) => {
+                let address = Address::new(address + registers.index_x, 0);
+                memory.get_byte(&address)
+            },
+            ZeroPageY(address) => {
+                let address = Address::new(address + registers.index_y, 0);
+                memory.get_byte(&address)
+            },
+            Relative(_)       => fail!("Not implemented."),
             Absolute(address) => memory.get_byte(&address),
+            AbsoluteX(base)   => {
+                let address = base + AddressDiff(registers.index_x as u16);
+                memory.get_byte(&address)
+            },
+            AbsoluteY(base)   => {
+                let address = base + AddressDiff(registers.index_y as u16);
+                memory.get_byte(&address)
+            },
             _                 => fail!("Not implemented.")
         }
     }
