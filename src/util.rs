@@ -25,16 +25,64 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-use machine::Machine;
+// Wraps std::io::timer::Timer with functions that take a function that will be
+// called once the timer has fired.
+use std::comm::TryRecvError;
+use std::io::timer::Timer;
+use std::io::IoResult;
+use std::time::duration::Duration;
 
-struct IcTimer {
-	irq_sender: Sender<()>
+pub struct FnTimer {
+	period_done_sender:   Option<Sender<()>>
 }
 
-impl IcTimer {
-	pub fn new(machine: &Machine) -> IcTimer {
-		IcTimer {
-			irq_sender: machine.clone_irq_sender()
+impl FnTimer{
+	pub fn new() -> FnTimer {
+		FnTimer {
+			period_done_sender: None
 		}
 	}
+
+	pub fn sleep(duration: Duration, fun: ||) {
+		let mut timer = Timer::new().unwrap();
+
+		timer.sleep(duration);
+		fun();
+	}
+
+	pub fn oneshot<F: FnOnce() + Send>(duration: Duration, fun: F) {
+		let mut timer = Timer::new().unwrap();
+
+		spawn(move |:| {
+			let receiver = timer.oneshot(duration);
+			receiver.recv();
+			fun();
+		});
+	}
+
+	pub fn periodic<F: FnOnce() + Send>(&mut self, duration: Duration, fun: F) {
+		let (period_done_sender, period_done_receiver) = channel();
+		self.period_done_sender = Some(period_done_sender);
+
+		let mut timer = Timer::new().unwrap();
+
+		spawn(move |:| {
+			let receiver = timer.periodic(duration);
+
+			loop {
+				let period_done_result = period_done_receiver.try_recv();
+
+				match period_done_result {
+					Ok(())                   => return,
+					Err(TryRecvError::Empty) => { },
+					Err(error)               => panic!(error)
+				}
+
+				receiver.recv();
+				fun(); // ERROR: fun has trait FnOnce but is called multiple times.
+			}
+		});
+	}
+
+	// TODO akeeton: destructor calls period_done_sender.send().
 }

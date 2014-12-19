@@ -31,6 +31,7 @@
 #[phase(plugin, link)]
 extern crate log;
 
+pub mod util;
 pub mod address;
 pub mod instruction;
 pub mod machine;

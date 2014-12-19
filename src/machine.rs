@@ -38,13 +38,13 @@ use registers::{ PS_NEGATIVE, PS_DECIMAL_MODE, PS_OVERFLOW, PS_ZERO, PS_CARRY,
 pub struct Machine {
     pub registers:    Registers,
     pub memory:       Memory,
-        irq_sender:   Sender<int>,
-        irq_receiver: Receiver<int>
+        irq_sender:   Sender<()>,
+        irq_receiver: Receiver<()>
 }
 
 impl Machine {
     pub fn new() -> Machine {
-        let (sender, receiver) = channel::<int>();
+        let (sender, receiver) = channel::<()>();
 
         Machine{
             registers:    Registers::new(),
@@ -434,7 +434,7 @@ impl Machine {
         }
     }
 
-    pub fn clone_irq_sender(&self) -> Sender<int> {
+    pub fn clone_irq_sender(&self) -> Sender<()> {
         self.irq_sender.clone()
     }
 
