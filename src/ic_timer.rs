@@ -24,17 +24,3 @@
 // CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
-
-// Needed for debug! / log! macros
-#![feature(phase)]
-
-#[phase(plugin, link)]
-extern crate log;
-
-pub mod address;
-pub mod instruction;
-pub mod machine;
-pub mod memory;
-pub mod registers;
-pub mod ic_timer;
-
