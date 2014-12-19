@@ -35,18 +35,23 @@ use registers::{ Registers, StackPointer, Status, StatusArgs };
 use registers::{ PS_NEGATIVE, PS_DECIMAL_MODE, PS_OVERFLOW, PS_ZERO, PS_CARRY,
                  PS_DISABLE_INTERRUPTS };
 
-#[deriving(Copy)]
 pub struct Machine {
-    pub registers: Registers,
-    pub memory:    Memory
+    pub registers:    Registers,
+    pub memory:       Memory,
+        irq_sender:   Sender<int>,
+        irq_receiver: Receiver<int>
 }
 
 impl Machine {
     pub fn new() -> Machine {
-    	Machine{
-    	    registers: Registers::new(),
-    	    memory:    Memory::new()
-    	}
+        let (sender, receiver) = channel::<int>();
+
+        Machine{
+            registers:    Registers::new(),
+            memory:       Memory::new(),
+            irq_sender:   sender,
+            irq_receiver: receiver
+        }
     }
 
     pub fn reset(&mut self) {
@@ -427,6 +432,10 @@ impl Machine {
                 break
             }
         }
+    }
+
+    pub fn clone_irq_sender(&self) -> Sender<int> {
+        self.irq_sender.clone()
     }
 
     fn set_flags_from_i8(status: &mut Status, value: i8) {
