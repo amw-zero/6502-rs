@@ -35,6 +35,7 @@ use registers::{ Registers, StackPointer, Status, StatusArgs };
 use registers::{ PS_NEGATIVE, PS_DECIMAL_MODE, PS_OVERFLOW, PS_ZERO, PS_CARRY,
                  PS_DISABLE_INTERRUPTS };
 
+#[derive(Copy)]
 pub struct Machine {
     pub registers:    Registers,
     pub memory:       Memory,
@@ -61,7 +62,7 @@ impl Machine {
     pub fn fetch_next_and_decode(&mut self) -> Option<DecodedInstr> {
         let x: u8 = self.memory.get_byte(self.registers.program_counter);
 
-        match instruction::OPCODES[x as uint] {
+        match instruction::OPCODES[x as usize] {
             Some((instr, am)) => {
                 let extra_bytes = am.extra_bytes();
                 let num_bytes = AddressDiff(1) + extra_bytes;
@@ -90,7 +91,7 @@ impl Machine {
             }
             (Instruction::ADC, OpInput::UseAddress(addr)) => {
                 let val = self.memory.get_byte(addr) as i8;
-                debug!("add with carry. address: {}. value: {}", addr, val);
+                debug!("add with carry. address: {:?}. value: {}", addr, val);
                 self.add_with_carry(val);
             }
 
@@ -159,7 +160,7 @@ impl Machine {
             (Instruction::BMI, OpInput::UseRelative(rel)) => {
                 let addr = self.registers.program_counter
                          + AddressDiff(rel as i32);
-                debug!("branch if minus relative. address: {}", addr);
+                debug!("branch if minus relative. address: {:?}", addr);
                 self.branch_if_minus(addr);
             }
 
@@ -260,7 +261,7 @@ impl Machine {
             }
             (Instruction::LDA, OpInput::UseAddress(addr)) => {
                 let val = self.memory.get_byte(addr);
-                debug!("load A. address: {}. value: {}", addr, val);
+                debug!("load A. address: {:?}. value: {}", addr, val);
                 self.load_accumulator(val as i8);
             }
 
@@ -270,7 +271,7 @@ impl Machine {
             }
             (Instruction::LDX, OpInput::UseAddress(addr)) => {
                 let val = self.memory.get_byte(addr);
-                debug!("load X. address: {}. value: {}", addr, val);
+                debug!("load X. address: {:?}. value: {}", addr, val);
                 self.load_x_register(val as i8);
             }
 
@@ -280,7 +281,7 @@ impl Machine {
             }
             (Instruction::LDY, OpInput::UseAddress(addr)) => {
                 let val = self.memory.get_byte(addr);
-                debug!("load Y. address: {}. value: {}", addr, val);
+                debug!("load Y. address: {:?}. value: {}", addr, val);
                 self.load_y_register(val as i8);
             }
 
@@ -360,7 +361,7 @@ impl Machine {
             }
             (Instruction::SBC, OpInput::UseAddress(addr)) => {
                 let val = self.memory.get_byte(addr) as i8;
-                debug!("subtract with carry. address: {}. value: {}",
+                debug!("subtract with carry. address: {:?}. value: {}",
                        addr, val);
                 self.subtract_with_carry(val);
             }
@@ -738,6 +739,7 @@ impl Machine {
     }
 }
 
+#[allow(unstable)]
 impl std::fmt::Show for Machine {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "Machine Dump:\n\nAccumulator: {}",
@@ -1137,10 +1139,11 @@ fn branch_if_overflow_set_test() {
 }
 
 #[cfg(test)]
-fn compare_test_helper(
-    compare:          |&mut Machine, u8|,
+fn compare_test_helper<F> (
+    compare:          &mut F,
     load_instruction: Instruction
-) {
+) where F: FnMut(&mut Machine, u8)
+{
     let mut machine = Machine::new();
 
     machine.execute_instruction(
@@ -1206,7 +1209,7 @@ fn compare_test_helper(
 #[test]
 fn compare_with_a_register_test() {
     compare_test_helper(
-        |machine: &mut Machine, val: u8| {
+        &mut |machine: &mut Machine, val: u8| {
             machine.compare_with_a_register(val);
         },
         Instruction::LDA
@@ -1216,7 +1219,7 @@ fn compare_with_a_register_test() {
 #[test]
 fn compare_with_x_register_test() {
     compare_test_helper(
-        |machine: &mut Machine, val: u8| {
+        &mut |machine: &mut Machine, val: u8| {
             machine.compare_with_x_register(val);
         },
         Instruction::LDX
@@ -1226,7 +1229,7 @@ fn compare_with_x_register_test() {
 #[test]
 fn compare_with_y_register_test() {
     compare_test_helper(
-        |machine: &mut Machine, val: u8| {
+        &mut |machine: &mut Machine, val: u8| {
             machine.compare_with_y_register(val);
         },
         Instruction::LDY
@@ -1237,13 +1240,13 @@ fn compare_with_y_register_test() {
 fn exclusive_or_test() {
     let mut machine = Machine::new();
 
-    for a_before in range(0u8, 255u8) {
-        for val in range(0u8, 255u8) {
+    for a_before in 0us..256 {
+        for val in 0us..256 {
             machine.execute_instruction(
-                (Instruction::LDA, OpInput::UseImmediate(a_before))
+                (Instruction::LDA, OpInput::UseImmediate(a_before as u8))
             );
 
-            machine.exclusive_or(val);
+            machine.exclusive_or(val as u8);
 
             let a_after = a_before ^ val;
             assert_eq!(machine.registers.accumulator, a_after as i8);
@@ -1267,13 +1270,13 @@ fn exclusive_or_test() {
 fn inclusive_or_test() {
     let mut machine = Machine::new();
 
-    for a_before in range(0u8, 255u8) {
-        for val in range(0u8, 255u8) {
+    for a_before in 0us..256 {
+        for val in 0us..256 {
             machine.execute_instruction(
-                (Instruction::LDA, OpInput::UseImmediate(a_before))
+                (Instruction::LDA, OpInput::UseImmediate(a_before as u8))
             );
 
-            machine.inclusive_or(val);
+            machine.inclusive_or(val as u8);
 
             let a_after = a_before | val;
             assert_eq!(machine.registers.accumulator, a_after as i8);

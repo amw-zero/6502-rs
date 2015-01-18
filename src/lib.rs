@@ -26,9 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 // Needed for debug! / log! macros
-#![feature(phase)]
-
-#[phase(plugin, link)]
+#[macro_use]
 extern crate log;
 
 pub mod util;
@@ -38,4 +36,3 @@ pub mod machine;
 pub mod memory;
 pub mod registers;
 pub mod ic_timer;
-

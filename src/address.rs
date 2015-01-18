@@ -25,16 +25,21 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+use std::num::Int;
+use std::ops::Add;
+
 // The idea here is that it doesn't make sense to add two addresses, but it
 // does make sense to add an address and an "address-difference". (If this
 // is too annoying to work with we should let it go.)
-#[deriving(Copy, PartialEq, Eq, PartialOrd, Ord, Show)]
+#[derive(Copy, PartialEq, Eq, PartialOrd, Ord, Show)]
 pub struct AddressDiff(pub i32);
 
-#[deriving(Copy, PartialEq, Eq, PartialOrd, Ord, Show)]
+#[derive(Copy, PartialEq, Eq, PartialOrd, Ord, Show)]
 pub struct Address(pub u16);
 
-impl Add<AddressDiff, Address> for Address {
+impl Add<AddressDiff> for Address {
+    type Output = Address;
+
     fn add(self, AddressDiff(rhs): AddressDiff) -> Address {
         let Address(lhs) = self;
 
@@ -43,37 +48,31 @@ impl Add<AddressDiff, Address> for Address {
     }
 }
 
-impl Add<AddressDiff, AddressDiff> for AddressDiff {
+impl Add for AddressDiff {
+    type Output = AddressDiff;
+
     fn add(self, AddressDiff(rhs): AddressDiff) -> AddressDiff {
         let AddressDiff(lhs) = self;
         AddressDiff(lhs + rhs)
     }
 }
 
-// rustc doesn't seem to like having multiple implementations of Add for
-// Address. I believe this is a Rust bug (possibly resolved by "associated
-// types" RFC?). Or I wrote it wrong. Anyway, here's some living dead code:
-/*
-#[deriving(PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct CheckedAddressDiff(u16);
 
-impl Add<CheckedAddressDiff, Address> for Address {
-    fn add(&self, &CheckedAddressDiff(rhs): &CheckedAddressDiff) -> Address {
-        let &Address(lhs) = self;
+impl Add<CheckedAddressDiff> for Address {
+    type Output = Address;
+
+    fn add(self, CheckedAddressDiff(rhs): CheckedAddressDiff) -> Address {
+        let Address(lhs) = self;
 
         // We probably don't want to overflow when doing arithmetic in our own
         // code.
-        debug_assert!({
-            match lhs.checked_add(&rhs) {
-                None => false,
-                _ => true
-            }
-        });
+        debug_assert!(lhs.checked_add(rhs).is_some());
 
         Address(lhs + rhs)
     }
 }
-*/
 
 impl Address {
     pub fn to_u16(&self) -> u16 {
@@ -82,8 +81,8 @@ impl Address {
         }
     }
 
-    pub fn to_uint(&self) -> uint {
-        self.to_u16() as uint
+    pub fn to_usize(&self) -> usize {
+        self.to_u16() as usize
     }
 
     pub fn get_page_number(&self) -> u8 {
